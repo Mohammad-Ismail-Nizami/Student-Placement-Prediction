@@ -1,7 +1,9 @@
 from pathlib import Path
-
+import pandas as pd
 import joblib
 import streamlit as st
+import matplotlib.pyplot as plt
+
 
 
 # ---------------------------------------------------------
@@ -44,7 +46,6 @@ except Exception as error:
     st.error("The placement prediction model could not be loaded.")
     st.exception(error)
     st.stop()
-
 
 # ---------------------------------------------------------
 # Model feature names
@@ -215,13 +216,14 @@ with profile_col3:
     )
 
     family_income = st.number_input(
-        "Annual Family Income",
-        min_value=0,
-        max_value=10_000_000,
-        value=500_000,
-        step=50_000,
-        help="Enter approximate annual family income."
-    )
+    "Annual Family Income (₹ lakh)",
+    min_value=1.0,
+    max_value=25.0,
+    value=8.0,
+    step=0.5,
+    key="family_income",
+    help="Enter annual family income in lakhs. Example: enter 8 for ₹8 lakh."
+)
 
 
 # ---------------------------------------------------------
@@ -418,6 +420,17 @@ with col3:
         key="certifications"
     )
 
+    coding_contest_rating = st.number_input(
+        "Coding Contest Rating",
+        min_value=0.0,
+        max_value=3000.0,
+        value=1200.0,
+        step=50.0,
+        key="coding_contest_rating",
+        help="Enter the student's approximate coding contest rating."
+    )
+
+
 st.info(
     "Internships, projects, certifications, hackathons, and an active GitHub profile strengthen a student's placement profile."
 )
@@ -498,3 +511,445 @@ with col2:
 st.info(
     "Strong communication, analytical thinking, teamwork, and leadership skills significantly improve placement readiness."
 )
+
+# ============================================================
+# 🧮 Derived Features
+# ============================================================
+
+programming_skill = (
+    python_skill +
+    cpp_skill +
+    java_skill
+) / 3
+
+technical_skill = (
+    python_skill +
+    cpp_skill +
+    java_skill +
+    ml_skill +
+    web_dev_skill
+) / 5
+
+academic_score = (
+    cgpa * 10 +
+    tenth_percentage +
+    twelfth_percentage
+) / 3
+
+experience_score = (
+    internships +
+    projects +
+    github_projects +
+    hackathons
+)
+
+problem_solving_index = (
+    problem_solving +
+    logical_reasoning +
+    aptitude_score
+) / 3
+
+# ============================================================
+# Create Input Data for Model
+# ============================================================
+
+input_data = pd.DataFrame({
+
+    "age": [age],
+    "cgpa": [cgpa],
+    "backlogs": [backlogs],
+    "attendance": [attendance],
+    "tenth_percentage": [tenth_percentage],
+    "twelfth_percentage": [twelfth_percentage],
+    "college_tier": [college_tier],
+
+    "python_skill": [python_skill],
+    "c++_skill": [cpp_skill],
+    "java_skill": [java_skill],
+    "ml_skill": [ml_skill],
+    "web_dev_skill": [web_dev_skill],
+
+    "communication_skill": [communication_skill],
+    "aptitude_score": [aptitude_score],
+    "logical_reasoning": [logical_reasoning],
+
+    "internships": [internships],
+    "projects": [projects],
+    "github_projects": [github_projects],
+    "hackathons": [hackathons],
+    "certifications": [certifications],
+
+    "coding_contest_rating": [coding_contest_rating],
+
+    "teamwork": [teamwork],
+    "leadership": [leadership],
+    "problem_solving": [problem_solving],
+    "time_management": [time_management],
+
+    "city_tier": [city_tier],
+    "family_income": [family_income],
+
+    "programming_skill": [programming_skill],
+    "technical_skill": [technical_skill],
+    "academic_score": [academic_score],
+    "experience_score": [experience_score],
+    "problem_solving_index": [problem_solving_index],
+
+    "branch_CSE": [1 if branch == "CSE" else 0],
+    "branch_ECE": [1 if branch == "ECE" else 0],
+    "branch_EE": [1 if branch == "EE" else 0],
+    "branch_IT": [1 if branch == "IT" else 0],
+    "branch_ME": [1 if branch == "ME" else 0],
+
+    "gender_Male": [1 if gender == "Male" else 0]
+
+})
+
+
+st.markdown("---")
+
+# ============================================================
+# 🎯 Prediction
+# ============================================================
+
+st.markdown("---")
+
+predict_button = st.button(
+    "🎯 Predict Placement",
+    use_container_width=True
+)
+
+
+if predict_button:
+
+    prediction = model.predict(input_data)[0]
+
+    probability = model.predict_proba(input_data)[0]
+
+    placement_probability = probability[1] * 100
+
+    not_placed_probability = probability[0] * 100
+
+
+    st.markdown("---")
+    st.subheader("🎯 Placement Prediction Result")
+
+    result_col1, result_col2, result_col3 = st.columns(3)
+
+    # ============================================================
+    # 📌 Personalized Recommendation
+    # ============================================================
+
+    suggestions = []
+
+    if cgpa < 7:
+        suggestions.append("Improve your CGPA through stronger academic performance.")
+
+    if python_skill < 6:
+        suggestions.append("Strengthen your Python programming skills.")
+
+    if technical_skill < 6:
+        suggestions.append("Improve your overall technical skills.")
+
+    if internships == 0:
+        suggestions.append("Complete at least one internship.")
+
+    if projects < 2:
+        suggestions.append("Build more real-world projects.")
+
+    if github_projects < 2:
+        suggestions.append("Publish more projects on GitHub.")
+
+    if hackathons == 0:
+        suggestions.append("Participate in hackathons to gain practical experience.")
+
+    if communication_skill < 6:
+        suggestions.append("Work on communication and interview skills.")
+
+    if aptitude_score < 60:
+        suggestions.append("Practice aptitude and logical reasoning questions.")
+
+    if backlogs > 0:
+        suggestions.append("Clear all academic backlogs as early as possible.")
+
+
+    with result_col1:
+        st.metric(
+            "Prediction",
+            "Likely Placed" if prediction == 1 else "Likely Not Placed"
+        )
+
+    with result_col2:
+        st.metric(
+            "Placement Probability",
+            f"{placement_probability:.2f}%"
+        )
+
+    with result_col3:
+        st.metric(
+            "Readiness Score",
+            f"{placement_probability:.0f}/100"
+
+        )
+    
+    if placement_probability >= 80:
+
+        st.success(
+            "🎉 Excellent profile! Your academic, technical, and practical skills "
+            "indicate strong placement readiness."
+        )
+
+    elif suggestions:
+
+        st.info(
+            "### 💡 Personalized Recommendations\n\n"
+            + "\n".join(f"- {item}" for item in suggestions)
+        )
+
+    else:
+
+        st.success(
+            "🎯 Your profile is well balanced. Continue improving coding practice "
+            "and interview preparation."
+        )
+    
+
+    # ============================================================
+    # 📊 Prediction Probability Distribution
+    # ============================================================
+
+    st.markdown("---")
+    st.subheader("📊 Prediction Probability Distribution")
+
+    labels = ["Not Placed", "Placed"]
+    values = [not_placed_probability, placement_probability]
+    colors = ["#ef4444", "#22c55e"]   # Red, Green
+
+    fig, ax = plt.subplots(figsize=(6.5,3.5))
+
+    fig.patch.set_facecolor("#0e1117")
+    ax.set_facecolor("#0e1117")
+
+    bars = ax.bar(labels, values, color=colors, width=0.38)
+
+    ax.set_ylim(0, 100)
+    ax.set_ylabel("Probability (%)", color="white", fontsize=12)
+    ax.set_title(
+        "Placement Prediction Confidence",
+        color="white",
+        fontsize=15,
+        fontweight="bold"
+    )
+
+    ax.tick_params(axis="x", colors="white")
+    ax.tick_params(axis="y", colors="white")
+
+    for spine in ax.spines.values():
+        spine.set_color("white")
+
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(
+            bar.get_x() + bar.get_width()/2,
+            height + 2,
+            f"{height:.1f}%",
+            ha="center",
+            color="white",
+            fontsize=11,
+            fontweight="bold"
+        )
+    st.pyplot(fig)
+
+
+    # ============================================================
+    # 📈 Factors Influencing the Current Prediction
+    # ============================================================
+
+    st.markdown("---")
+    st.subheader("📈 Top Factors Behind This Prediction")
+
+
+    # Get the scaler and Logistic Regression estimator from the pipeline
+    scaler = next(
+        step
+        for step in model.named_steps.values()
+        if hasattr(step, "transform") and not hasattr(step, "coef_")
+    )
+
+    logistic_model = next(
+        step
+        for step in model.named_steps.values()
+        if hasattr(step, "coef_")
+    )
+
+    # Scale the current input exactly as the model did during training
+    scaled_input = scaler.transform(input_data)
+
+    # Local contribution = scaled value × model coefficient
+    contributions = scaled_input[0] * logistic_model.coef_[0]
+
+    contribution_df = pd.DataFrame({
+        "Feature": input_data.columns,
+        "Contribution": contributions
+    })
+
+    feature_labels = {
+        "age": "Age",
+        "cgpa": "CGPA",
+        "backlogs": "Backlogs",
+        "attendance": "Attendance",
+        "tenth_percentage": "10th Percentage",
+        "twelfth_percentage": "12th Percentage",
+        "college_tier": "College Tier",
+        "python_skill": "Python Skill",
+        "c++_skill": "C++ Skill",
+        "java_skill": "Java Skill",
+        "ml_skill": "Machine Learning Skill",
+        "web_dev_skill": "Web Development Skill",
+        "communication_skill": "Communication Skill",
+        "aptitude_score": "Aptitude Score",
+        "logical_reasoning": "Logical Reasoning",
+        "internships": "Internships",
+        "projects": "Projects",
+        "github_projects": "GitHub Projects",
+        "hackathons": "Hackathons",
+        "certifications": "Certifications",
+        "coding_contest_rating": "Coding Contest Rating",
+        "teamwork": "Teamwork",
+        "leadership": "Leadership",
+        "problem_solving": "Problem Solving",
+        "time_management": "Time Management",
+        "city_tier": "City Tier",
+        "family_income": "Family Income",
+        "programming_skill": "Programming Skills",
+        "technical_skill": "Technical Skills",
+        "academic_score": "Academic Performance",
+        "experience_score": "Experience Score",
+        "problem_solving_index": "Problem-Solving Index",
+        "branch_CSE": "CSE Branch",
+        "branch_ECE": "ECE Branch",
+        "branch_EE": "EE Branch",
+        "branch_IT": "IT Branch",
+        "branch_ME": "Mechanical Branch",
+        "gender_Male": "Gender: Male"
+    }
+
+    contribution_df["Feature"] = contribution_df["Feature"].replace(
+        feature_labels
+    )
+
+    contribution_df["Magnitude"] = (
+        contribution_df["Contribution"].abs()
+    )
+
+    top_contributions = (
+        contribution_df
+        .sort_values("Magnitude", ascending=False)
+        .head(10)
+        .sort_values("Contribution")
+    )
+
+    contribution_colors = [
+        "#ef4444" if value < 0 else "#22c55e"
+        for value in top_contributions["Contribution"]
+    ]
+
+    fig2, ax2 = plt.subplots(figsize=(7, 4.5))
+
+    fig2.patch.set_facecolor("#0e1117")
+    ax2.set_facecolor("#0e1117")
+
+    ax2.barh(
+        top_contributions["Feature"],
+        top_contributions["Contribution"],
+        color=contribution_colors
+    )
+
+    ax2.axvline(
+        0,
+        color="white",
+        linewidth=1
+    )
+
+    ax2.set_title(
+        "Top Factors Behind This Prediction",
+        color="white",
+        fontsize=15,
+        fontweight="bold"
+    )
+
+    ax2.set_xlabel(
+        "Contribution to Placement Prediction",
+        color="white"
+    )
+
+    ax2.tick_params(
+        axis="x",
+        colors="white"
+    )
+
+    ax2.tick_params(
+        axis="y",
+        colors="white"
+    )
+
+    for spine in ax2.spines.values():
+        spine.set_color("white")
+
+    ax2.grid(
+        axis="x",
+        linestyle="--",
+        alpha=0.25
+    )
+
+    fig2.tight_layout()
+    st.pyplot(fig2)
+    plt.close(fig2)
+
+    st.caption(
+        "Green factors push the model toward placement, while red factors "
+        "push it toward not being placed. These are model-based contributions, "
+        "not guaranteed real-world causes."
+    )
+
+
+
+    # ============================================================
+    # 📘 About the Model
+    # ============================================================
+
+    with st.expander("📘 About the Prediction Model"):
+
+        st.markdown("""
+        ### Model Information
+
+        This application predicts a student's placement readiness using a **Logistic Regression Pipeline** trained on approximately **1,000,000 student records**.
+
+        ### Features Used
+
+        The prediction is based on multiple factors, including:
+
+        - Academic performance (CGPA, attendance, backlogs)
+        - Technical skills (Python, C++, Java, ML, Web Development)
+        - Practical experience (Internships, Projects, GitHub, Hackathons)
+        - Soft skills (Communication, Leadership, Teamwork)
+        - Engineered features:
+        - Academic Score
+        - Technical Skill Score
+        - Programming Skill
+        - Experience Score
+        - Problem Solving Index
+
+        ### Model Pipeline
+
+        - StandardScaler for feature scaling
+        - Logistic Regression classifier
+        - Hyperparameter tuning using GridSearchCV
+        - Cross-validation for model evaluation
+
+        ### Important Note
+
+        This prediction is an educational estimate based on historical patterns. Actual placement outcomes also depend on interviews, company requirements, communication skills, and current job-market conditions.
+        """)
